@@ -43,7 +43,7 @@ fn result_to_number(result: Result<(), Error>) -> u8 {
 
 #[wasm_bindgen]
 pub fn encode(shards: &mut [u8], data_shards: usize, parity_shards: usize) -> u8 {
-    let reed_solomon = ReedSolomon::new(data_shards, parity_shards).unwrap();
+    let reed_solomon = ReedSolomon::<reed_solomon_erasure::galois_8::Field>::new(data_shards, parity_shards).unwrap();
     let shard_size = shards.len() / (data_shards + parity_shards);
 
     let mut separate_slice_shards: Vec<_> = shards
@@ -62,24 +62,15 @@ pub fn reconstruct(
     parity_shards: usize,
     shards_available: &[u8]
 ) -> u8 {
-    let reed_solomon = ReedSolomon::new(data_shards, parity_shards).unwrap();
+    let reed_solomon = ReedSolomon::<reed_solomon_erasure::galois_8::Field>::new(data_shards, parity_shards).unwrap();
     let shard_size = shards.len() / (data_shards + parity_shards);
 
     let mut separate_slice_shards: Vec<_> = shards
         .chunks_exact_mut(shard_size)
-        .collect();
-
-    let shards_available_slice: Vec<_> = shards_available
-        .iter()
-        .map(|&num| {
-            num == 1u8
-        })
+        .zip(shards_available.iter().map(|&num| num == 1u8))
         .collect();
 
     return result_to_number(
-        reed_solomon.reconstruct_data(
-            &mut separate_slice_shards,
-            &shards_available_slice
-        )
+        reed_solomon.reconstruct_data(&mut separate_slice_shards)
     );
 }
